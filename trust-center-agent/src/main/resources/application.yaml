@@ -12,7 +12,7 @@ deIdentification:
   keystoreUrl: redis://keystore:6379
   gpas:
     fhir:
-      baseUrl: http://gpas:8080/ttp-fhir/fhir/gpas
+      baseUrl: http://gpas:8080 #/ttp-fhir/fhir/gpas
   pseudonymization:
     transportIdTTLinSeconds: 300
 

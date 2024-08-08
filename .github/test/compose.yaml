@@ -127,22 +127,37 @@ services:
       retries: 3
       start_period: 120s
   gpas:
-    image: creg.smith.care/fts/gpas:2023.1.2@sha256:6ccc25c108060fe7dce34a776c60b24139b655796c51256600a86ad3d71818f6
-    ports: [ ":8080" ]
+    image: pseudomizer:latest
     networks: [ "trust-center", "gpas" ]
+    ports: [ ":8080" ]
     depends_on:
       gpas-db:
         condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:root@gpas-db:3306/gpas
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8080/gpas/gpasService?wsdl" ]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/health" ]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 120s
+  #  gpas:
+  #    image: creg.smith.care/fts/gpas:2023.1.2@sha256:6ccc25c108060fe7dce34a776c60b24139b655796c51256600a86ad3d71818f6
+  #    ports: [ ":8080" ]
+  #    networks: [ "trust-center", "gpas" ]
+  #    depends_on:
+  #      gpas-db:
+  #        condition: service_healthy
+  #    healthcheck:
+  #      test: [ "CMD", "curl", "-f", "http://localhost:8080/gpas/gpasService?wsdl" ]
+  #      interval: 10s
+  #      timeout: 5s
+  #      retries: 3
+  #      start_period: 120s
   gpas-db:
     image: mysql:9.0.1@sha256:d8df069848906979fd7511db00dc22efeb0a33a990d87c3c6d3fcdafd6fc6123
-    volumes:
-    - ./gpas/initdb/:/docker-entrypoint-initdb.d
+    #    volumes:
+    #    - ./gpas/initdb/:/docker-entrypoint-initdb.d
     command: --max_allowed_packet=20M --default-time-zone=Europe/Berlin
     environment:
       MYSQL_ROOT_PASSWORD: root

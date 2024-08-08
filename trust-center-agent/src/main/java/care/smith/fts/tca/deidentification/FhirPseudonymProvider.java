@@ -1,7 +1,7 @@
 package care.smith.fts.tca.deidentification;
 
-import static care.smith.fts.util.MediaTypes.APPLICATION_FHIR_JSON;
 import static care.smith.fts.util.RetryStrategies.defaultRetryStrategy;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 
 import care.smith.fts.tca.deidentification.configuration.PseudonymizationConfiguration;
 import care.smith.fts.util.error.UnknownDomainException;
@@ -10,12 +10,12 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientResponse;
@@ -63,7 +63,7 @@ public class FhirPseudonymProvider implements PseudonymProvider {
     return Mono.just(mapName)
         .map(redis::getMap)
         .flatMapMany(
-            map -> fetchOrCreatePseudonyms(domain, ids).map(pidTuple -> Tuples.of(map, pidTuple)))
+            rMap -> fetchOrCreatePseudonyms(domain, ids).map(pidTuple -> Tuples.of(rMap, pidTuple)))
         .flatMap(
             tuple -> {
               var map = tuple.getT1();
@@ -89,24 +89,20 @@ public class FhirPseudonymProvider implements PseudonymProvider {
    * @return Flux of (id, pid) tuples
    */
   private Flux<Tuple2<String, String>> fetchOrCreatePseudonyms(String domain, Set<String> ids) {
-    var idParams =
-        Stream.concat(
-            Stream.of(Map.of("name", "target", "valueString", domain)),
-            ids.stream().map(id -> Map.of("name", "original", "valueString", id)));
-    var params = Map.of("resourceType", "Parameters", "parameter", idParams.toList());
+    var params = Map.of("domain", domain, "ids", ids);
 
     log.trace("fetchOrCreatePseudonyms for domain: %s and %d ids".formatted(domain, ids.size()));
     var t0 = LocalDateTime.now();
     return httpClient
         .post()
-        .uri("/$pseudonymizeAllowCreate")
-        .headers(h -> h.setContentType(APPLICATION_FHIR_JSON))
+        .uri("/pseudonymize")
+        .headers(h -> h.setContentType(APPLICATION_JSON))
+        .headers(h -> h.setAccept(List.of(APPLICATION_JSON)))
         .bodyValue(params)
-        .headers(h -> h.setAccept(List.of(APPLICATION_FHIR_JSON)))
         .retrieve()
         .onStatus(
             r -> r.equals(HttpStatus.BAD_REQUEST), FhirPseudonymProvider::handleGpasBadRequest)
-        .bodyToMono(GpasParameterResponse.class)
+        .bodyToMono(new ParameterizedTypeReference<Map<String, String>>() {})
         .timeout(Duration.ofSeconds(20))
         .doOnNext(
             i -> {
@@ -115,8 +111,10 @@ public class FhirPseudonymProvider implements PseudonymProvider {
             })
         .doOnError(e -> log.error(e.getMessage()))
         .retryWhen(defaultRetryStrategy())
-        .doOnNext(r -> log.trace("$pseudonymize response: {} parameters", r.parameter().size()))
-        .map(GpasParameterResponse::getMappedID)
+
+        //        .doOnNext(r -> log.trace("$pseudonymize response: {} parameters",
+        // r.parameter().size()))
+        //        .map(GpasParameterResponse::getMappedID)
         .flatMapMany(
             map -> Flux.fromIterable(map.entrySet()).map(e -> Tuples.of(e.getKey(), e.getValue())));
   }

@@ -13,7 +13,7 @@ deIdentification:
   keystoreUrl: redis://valkey:6379
   gpas:
     fhir:
-      baseUrl: http://gpas:8080/ttp-fhir/fhir/gpas
+      baseUrl: http://gpas:8080 #/ttp-fhir/fhir/gpas
       auth:
         none: { }
   pseudonymization:

@@ -2,14 +2,12 @@ package care.smith.fts.tca.deidentification;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockserver.matchers.MatchType.ONLY_MATCHING_FIELDS;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
-import static org.mockserver.model.JsonBody.json;
+import static org.mockserver.model.MediaType.APPLICATION_JSON;
 import static reactor.test.StepVerifier.create;
 
 import care.smith.fts.tca.deidentification.configuration.PseudonymizationConfiguration;
-import care.smith.fts.test.FhirGenerators;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
@@ -23,7 +21,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.junit.jupiter.MockServerExtension;
-import org.mockserver.model.MediaType;
 import org.redisson.api.RMapReactive;
 import org.redisson.api.RedissonClient;
 import org.redisson.api.RedissonReactiveClient;
@@ -66,25 +63,13 @@ class FhirPseudonymProviderTest {
 
   @Test
   void retrieveTransportIds(MockServerClient mockServer) throws IOException {
-    var fhirGenerator = FhirGenerators.gpasGetOrCreateResponse(() -> "id1", () -> "469680023");
-
     mockServer
         .when(
             request()
                 .withMethod("POST")
-                .withPath("/$pseudonymizeAllowCreate")
-                .withBody(
-                    json(
-                        """
-                                  { "resourceType": "Parameters", "parameter": [
-                                    {"name": "target", "valueString": "domain"}, {"name":
-   "original", "valueString": "id1"}]}
-                                  """,
-                        ONLY_MATCHING_FIELDS)))
-        .respond(
-            response()
-                .withBody(
-                    fhirGenerator.generateString(), MediaType.create("application", "fhir+json")));
+                .withPath("/pseudonymize")
+                .withContentType(APPLICATION_JSON))
+        .respond(response().withContentType(APPLICATION_JSON).withBody("{\"id1\": \"any pid\"}"));
 
     given(redis.getMap(anyString())).willReturn(map);
     given(map.fastPut(anyString(), anyString())).willReturn(Mono.just(false));
@@ -99,27 +84,7 @@ class FhirPseudonymProviderTest {
   }
 
   @Test
-  void retrieveTransportIdsWhenRedisDown(MockServerClient mockServer) throws IOException {
-    var fhirGenerator = FhirGenerators.gpasGetOrCreateResponse(() -> "id1", () -> "469680023");
-
-    mockServer
-        .when(
-            request()
-                .withMethod("POST")
-                .withPath("/$pseudonymizeAllowCreate")
-                .withBody(
-                    json(
-                        """
-                                  { "resourceType": "Parameters", "parameter": [
-                                    {"name": "target", "valueString": "domain"}, {"name":
-   "original", "valueString": "id1"}]}
-                                  """,
-                        ONLY_MATCHING_FIELDS)))
-        .respond(
-            response()
-                .withBody(
-                    fhirGenerator.generateString(), MediaType.create("application", "fhir+json")));
-
+  void retrieveTransportIdsWhenRedisDown() {
     given(redis.getMap(anyString())).willThrow(new RedisTimeoutException("timeout"));
 
     create(pseudonymProvider.retrieveTransportIds(Set.of("id1"), "domain"))

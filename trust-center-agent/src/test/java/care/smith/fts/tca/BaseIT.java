@@ -28,7 +28,7 @@ public class BaseIT {
 
   @DynamicPropertySource
   static void registerGpasMockUrl(DynamicPropertyRegistry registry) {
-    String baseUrl = "http://localhost:%d/ttp-fhir/fhir/gpas".formatted(gpas.getPort());
+    String baseUrl = "http://localhost:%d".formatted(gpas.getPort());
     registry.add("de-identification.gpas.fhir.base-url", () -> baseUrl);
   }
 

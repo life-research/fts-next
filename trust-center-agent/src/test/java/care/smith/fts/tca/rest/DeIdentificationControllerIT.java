@@ -1,19 +1,17 @@
 package care.smith.fts.tca.rest;
 
-import static care.smith.fts.test.GpasTestHelper.pseudonymizeAllowCreate;
-import static care.smith.fts.test.MockServerUtil.APPLICATION_FHIR_JSON;
 import static java.time.Duration.ofDays;
 import static java.util.Map.entry;
 import static java.util.Map.ofEntries;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
+import static org.mockserver.model.MediaType.APPLICATION_JSON;
 import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static reactor.test.StepVerifier.create;
 
 import care.smith.fts.tca.BaseIT;
 import care.smith.fts.util.tca.PseudonymizeResponse;
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -41,22 +39,17 @@ class DeIdentificationControllerIT extends BaseIT {
   }
 
   @Test
-  void successfulRequest() throws IOException {
+  void successfulRequest() {
     gpas.when(
             request()
                 .withMethod("POST")
-                .withPath("/ttp-fhir/fhir/gpas/$pseudonymizeAllowCreate")
-                .withContentType(APPLICATION_FHIR_JSON))
+                .withPath("/pseudonymize")
+                .withContentType(APPLICATION_JSON))
         .respond(
             response()
-                .withContentType(APPLICATION_FHIR_JSON)
+                .withContentType(APPLICATION_JSON)
                 .withBody(
-                    pseudonymizeAllowCreate(
-                        "MII",
-                        ofEntries(
-                            entry("patient-144218", "pseudonym-144352"),
-                            entry("id-144218", "pseudonym-144218"),
-                            entry("id-244194", "pseudonym-244194")))));
+                    "{\"patient-144218\": \"pseudonym-144352\",\"id-144218\": \"pseudonym-144218\",\"id-244194\": \"pseudonym-244194\"}"));
 
     var response =
         doPost(
@@ -77,20 +70,16 @@ class DeIdentificationControllerIT extends BaseIT {
   }
 
   @Test
-  void firstRequestToGpasFails() throws IOException {
+  void firstRequestToGpasFails() {
     var statusCodes = new LinkedList<>(List.of(500));
     String body =
-        pseudonymizeAllowCreate(
-            "MII",
-            ofEntries(
-                entry("patient-144218", "pseudonym-144352"),
-                entry("id-144218", "pseudonym-144218"),
-                entry("id-244194", "pseudonym-244194")));
+        "{\"patient-144218\": \"pseudonym-144352\",\"id-144218\": \"pseudonym-144218\",\"id-244194\": \"pseudonym-244194\"}";
+
     gpas.when(
             request()
                 .withMethod("POST")
-                .withPath("/ttp-fhir/fhir/gpas/$pseudonymizeAllowCreate")
-                .withContentType(APPLICATION_FHIR_JSON))
+                .withPath("/pseudonymize")
+                .withContentType(APPLICATION_JSON))
         .respond(
             request ->
                 Optional.ofNullable(statusCodes.poll())
@@ -100,7 +89,7 @@ class DeIdentificationControllerIT extends BaseIT {
                         () ->
                             response()
                                 .withStatusCode(200)
-                                .withContentType(APPLICATION_FHIR_JSON)
+                                .withContentType(APPLICATION_JSON)
                                 .withBody(body)));
 
     var response =
