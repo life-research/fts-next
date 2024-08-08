@@ -7,3 +7,7 @@ management:
   metrics:
     distribution.slo:
       http.server.requests: 25,100,250,500,1000,10000,60000
+
+spring:
+  codec:
+    max-in-memory-size: 10MB
