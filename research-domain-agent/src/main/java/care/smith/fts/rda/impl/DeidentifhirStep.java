@@ -8,7 +8,6 @@ import care.smith.fts.api.TransportBundle;
 import care.smith.fts.api.rda.Deidentificator;
 import java.time.Duration;
 import java.util.Map;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Bundle;
 import org.springframework.http.MediaType;
@@ -32,18 +31,18 @@ class DeidentifhirStep implements Deidentificator {
 
   @Override
   public Mono<Bundle> replaceIds(TransportBundle bundle) {
-    return fetchPseudonymsForTransportIds(bundle.transportIds())
+    return fetchPseudonymsForTransportIds(bundle.mapName())
         .map(p -> replaceIDs(deidentifhirConfig, generateRegistry(p), bundle.bundle()))
         .doOnNext(b -> log.trace("Total bundle entries: {}", b.getEntry().size()));
   }
 
-  private Mono<Map<String, String>> fetchPseudonymsForTransportIds(Set<String> transportIds) {
+  private Mono<Map<String, String>> fetchPseudonymsForTransportIds(String mapName) {
 
     return httpClient
         .post()
         .uri("/api/v2/rd/resolve-pseudonyms")
         .headers(h -> h.setContentType(MediaType.APPLICATION_JSON))
-        .bodyValue(transportIds)
+        .bodyValue(mapName)
         .retrieve()
         .bodyToMono(Object.class)
         .map(o -> (Map<String, String>) o)

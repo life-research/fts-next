@@ -1,5 +1,7 @@
 package care.smith.fts.tca.rest;
 
+import static care.smith.fts.util.RetryStrategies.defaultRetryStrategy;
+
 import care.smith.fts.tca.deidentification.PseudonymProvider;
 import care.smith.fts.tca.deidentification.ShiftedDatesProvider;
 import care.smith.fts.util.error.ErrorResponseUtil;
@@ -9,8 +11,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -41,22 +45,31 @@ public class DeIdentificationController {
   @ExceptionHandler(UnknownDomainException.class)
   public Mono<ResponseEntity<PseudonymizeResponse>> getTransportIdsAndDateShiftingValues(
       @Valid @RequestBody Mono<PseudonymizeRequest> requestData) {
+    var t0 = LocalDateTime.now();
+    var nIds = new AtomicInteger(0);
     var response =
         requestData.flatMap(
             r -> {
               if (!r.ids().isEmpty()) {
-                Mono<Map<String, String>> transportIds =
-                    pseudonymProvider.retrieveTransportIds(r.ids(), r.domain());
+                nIds.set(r.ids().size());
+                var transportIds = pseudonymProvider.retrieveTransportIds(r.ids(), r.domain());
                 Mono<Map<String, Duration>> shiftedDates =
                     shiftedDatesProvider.generateDateShift(Set.of(r.patientId()), r.dateShift());
                 return transportIds.zipWith(
-                    shiftedDates, (t, s) -> new PseudonymizeResponse(t, s.get(r.patientId())));
+                    shiftedDates,
+                    (t, s) -> new PseudonymizeResponse(t.getT1(), t.getT2(), s.get(r.patientId())));
               } else {
                 return Mono.empty();
               }
             });
+
     return response
         .map(ResponseEntity::ok)
+        .doOnNext(
+            i -> {
+              var d = Duration.between(t0, LocalDateTime.now());
+              log.trace("Duration for {} IDs: {}", nIds.get(), d);
+            })
         .onErrorResume(
             e -> {
               if (e instanceof UnknownDomainException) {
@@ -73,11 +86,12 @@ public class DeIdentificationController {
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
   public Mono<ResponseEntity<Map<String, String>>> fetchPseudonymizedIds(
-      @RequestBody @NotNull Set<@Pattern(regexp = "^[\\w-]+$") String> ids) {
-    var pseudonymizedIDs =
-        Mono.just(ids)
-            .doOnNext(b -> log.info("Resolve pseudonyms for: {}", b))
-            .flatMap(pseudonymProvider::fetchPseudonymizedIds);
-    return pseudonymizedIDs.map(ResponseEntity::ok);
+      @RequestBody @NotNull @Pattern(regexp = "^[\\w-]+$") String mapName) {
+    log.trace("Resolve pseudonyms of map: {} ", mapName);
+    return pseudonymProvider
+        .fetchPseudonymizedIds(mapName)
+        .doOnError(e -> log.error(e.getMessage()))
+        .retryWhen(defaultRetryStrategy())
+        .map(ResponseEntity::ok);
   }
 }

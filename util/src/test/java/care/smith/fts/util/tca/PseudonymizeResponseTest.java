@@ -17,9 +17,10 @@ class PseudonymizeResponseTest {
   @Test
   void serialize() throws JsonProcessingException {
     Map<String, String> idMap = Map.of("original", "pseudonym");
-    var response = new PseudonymizeResponse(idMap, Duration.ofDays(14));
+    var response = new PseudonymizeResponse("mapName", idMap, Duration.ofDays(14));
 
     assertThat(objectMapper.writeValueAsString(response))
+        .contains("mapName")
         .contains("original")
         .contains("pseudonym")
         .contains("1209600");

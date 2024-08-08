@@ -4,6 +4,7 @@ import static java.lang.Long.parseLong;
 import static java.time.Duration.ofMillis;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -27,6 +28,8 @@ public class FhirShiftedDatesProvider implements ShiftedDatesProvider {
   @Override
   public Mono<Map<String, Duration>> generateDateShift(Set<String> ids, Duration dateShiftBy) {
     RedissonReactiveClient redis = redisClient.reactive();
+    var t0 = LocalDateTime.now();
+
     return Flux.fromIterable(ids)
         .flatMap(
             id ->
@@ -44,7 +47,12 @@ public class FhirShiftedDatesProvider implements ShiftedDatesProvider {
                     .get()
                     .doOnError(e -> log.error("Receive date shift: {}", e.getMessage()))
                     .map(shift -> new Entry(id, ofMillis(parseLong(shift)))))
-        .collectMap(Entry::id, Entry::shift);
+        .collectMap(Entry::id, Entry::shift)
+        .doOnNext(
+            i -> {
+              var d = Duration.between(t0, LocalDateTime.now());
+              log.trace("Duration for time-shift: {}", d);
+            });
   }
 
   private static String withPrefix(String id) {

@@ -20,7 +20,6 @@ import care.smith.fts.api.cda.BundleSender;
 import care.smith.fts.test.WebClientTestUtil;
 import care.smith.fts.util.HTTPClientConfig;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Patient;
@@ -62,7 +61,7 @@ class RDABundleSenderTest {
                     .willRespond(ClientResponse.create(BAD_REQUEST).build()));
     var bundleSender = new RDABundleSender(config, config.server().createClient(client));
 
-    create(bundleSender.send(fromIterable(List.of(new TransportBundle(new Bundle(), Set.of())))))
+    create(bundleSender.send(fromIterable(List.of(new TransportBundle(new Bundle(), "mapName")))))
         .expectError()
         .verify();
   }
@@ -79,7 +78,7 @@ class RDABundleSenderTest {
     var bundleSender = new RDABundleSender(config, config.server().createClient(client));
 
     var bundle = Stream.of(new Patient().setId(PATIENT_ID)).collect(toBundle());
-    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, Set.of())))))
+    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, "mapName")))))
         .expectErrorMessage("Missing Content-Location")
         .verify();
   }
@@ -101,7 +100,7 @@ class RDABundleSenderTest {
     var bundleSender = new RDABundleSender(config, config.server().createClient(client));
 
     var bundle = Stream.of(new Patient().setId(PATIENT_ID)).collect(toBundle());
-    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, Set.of())))))
+    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, "mapName")))))
         .expectNext(new BundleSender.Result(1))
         .verifyComplete();
   }
@@ -128,7 +127,7 @@ class RDABundleSenderTest {
     var bundleSender = new RDABundleSender(config, config.server().createClient(client));
 
     var bundle = Stream.of(new Patient().setId(PATIENT_ID)).collect(toBundle());
-    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, Set.of())))))
+    create(bundleSender.send(fromIterable(List.of(new TransportBundle(bundle, "mapName")))))
         .expectNext(new BundleSender.Result(1))
         .verifyComplete();
   }

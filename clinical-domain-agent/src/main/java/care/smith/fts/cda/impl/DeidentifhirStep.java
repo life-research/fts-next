@@ -2,7 +2,6 @@ package care.smith.fts.cda.impl;
 
 import static care.smith.fts.cda.services.deidentifhir.DeidentifhirUtils.generateRegistry;
 import static care.smith.fts.util.RetryStrategies.defaultRetryStrategy;
-import static java.util.Set.copyOf;
 
 import care.smith.fts.api.ConsentedPatient;
 import care.smith.fts.api.ConsentedPatientBundle;
@@ -63,7 +62,7 @@ class DeidentifhirStep implements Deidentificator {
               var deidentified =
                   DeidentifhirUtils.deidentify(
                       deidentifhirConfig, registry, bundle.bundle(), patient.id());
-              return new TransportBundle(deidentified, copyOf(transportIDs.values()));
+              return new TransportBundle(deidentified, response.mapName());
             });
   }
 
@@ -85,6 +84,7 @@ class DeidentifhirStep implements Deidentificator {
                 s.bodyToMono(ProblemDetail.class)
                     .flatMap(b -> Mono.error(new TransferProcessException(b.getDetail()))))
         .bodyToMono(PseudonymizeResponse.class)
+        .timeout(Duration.ofSeconds(20))
         .doOnError(e -> log.error(e.getMessage()))
         .retryWhen(defaultRetryStrategy());
   }
