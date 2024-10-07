@@ -57,19 +57,20 @@ public class FhirPseudonymProvider implements PseudonymProvider {
    * Store tid:pid in the key-value-store.
    *
    * @param ids the IDs to pseudonymize
-   * @param domain the domain used in gPAS
+   * @param pseudonymDomain the domain used in gPAS
+   * @param saltDomain
    * @return Map<TID, PID>
    */
   @Override
   public Mono<Tuple2<String, Map<String, String>>> retrieveTransportIds(
-      String patientId, Set<String> ids, String domain) {
+      String patientId, Set<String> ids, String pseudonymDomain, String saltDomain) {
     log.trace("retrieveTransportIds patientId={}, ids={}", patientId, ids);
     var saltKey = "Salt_" + patientId;
     var tIDMapName = generateTID();
     var originalToTransportIDMapping = ids.stream().collect(toMap(id -> id, id -> generateTID()));
     var rMap = redisClient.reactive().getMapCache(tIDMapName);
     return rMap.expire(Duration.ofSeconds(configuration.getTransportIdTTLinSeconds()))
-        .flatMap(ignore -> fetchOrCreatePseudonyms(domain, Set.of(patientId, saltKey)))
+        .flatMap(ignore -> fetchOrCreatePseudonyms(pseudonymDomain, Set.of(patientId, saltKey)))
         .flatMap(
             originalToSecureIDMapping -> {
               var sha256 = Hashing.sha256();

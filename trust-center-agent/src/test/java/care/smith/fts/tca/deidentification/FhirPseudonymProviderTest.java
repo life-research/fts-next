@@ -109,7 +109,7 @@ class FhirPseudonymProviderTest {
 
     var ids = Set.of("Patient.id1", "identifier.id1");
     var mapName = "Bo1z3Z87i";
-    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain"))
+    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain", "domain"))
         .assertNext(
             t2 -> {
               assertThat(t2.getT1()).isEqualTo(mapName);
@@ -124,7 +124,7 @@ class FhirPseudonymProviderTest {
     given(redis.getMapCache(anyString())).willThrow(new RedisTimeoutException("timeout"));
     assertThrows(
         RedisTimeoutException.class,
-        () -> pseudonymProvider.retrieveTransportIds("id1", Set.of("id1"), "domain"));
+        () -> pseudonymProvider.retrieveTransportIds("id1", Set.of("id1"), "domain", "domain"));
   }
 
   @Test
@@ -165,7 +165,7 @@ class FhirPseudonymProviderTest {
     given(mapCache.expire(Duration.ofSeconds(1000))).willReturn(Mono.just(false));
 
     Set<String> ids = Set.of("id1");
-    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain"))
+    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain", "domain"))
         .expectError(UnknownDomainException.class)
         .verify();
   }
@@ -185,7 +185,7 @@ class FhirPseudonymProviderTest {
     given(mapCache.expire(Duration.ofSeconds(1000))).willReturn(Mono.just(false));
 
     Set<String> ids = Set.of("id1");
-    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain"))
+    create(pseudonymProvider.retrieveTransportIds("id1", ids, "domain", "domain"))
         .expectError(IllegalArgumentException.class)
         .verify();
   }

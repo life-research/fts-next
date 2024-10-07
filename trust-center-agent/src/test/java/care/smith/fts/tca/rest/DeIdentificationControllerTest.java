@@ -39,12 +39,14 @@ class DeIdentificationControllerTest {
   void getTransportIdsAndDateShiftingValues() {
     var ids = Set.of("id1", "id2");
     var mapName = "tIDMapName";
-    given(pseudonymProvider.retrieveTransportIds("patientId1", ids, "domain"))
+    given(pseudonymProvider.retrieveTransportIds("patientId1", ids, "domain", "domain"))
         .willReturn(Mono.just(Tuples.of(mapName, Map.of("id1", "tid1", "id2", "tid2"))));
     given(shiftedDatesProvider.generateDateShift("patientId1", Duration.ofDays(14)))
         .willReturn(Mono.just(Duration.ofDays(1)));
 
-    var body = new PseudonymizeRequest("patientId1", ids, "domain", Duration.ofDays(14));
+    var body =
+        new PseudonymizeRequest(
+            "patientId1", ids, "domain", "domain", "domain", Duration.ofDays(14));
 
     create(controller.getTransportIdsAndDateShiftingValues(Mono.just(body)))
         .assertNext(
@@ -61,12 +63,21 @@ class DeIdentificationControllerTest {
 
   @Test
   void getTransportIdsAndDateShiftingValuesUnknownDomain() {
-    given(pseudonymProvider.retrieveTransportIds("id1", Set.of("id1"), "unknown domain"))
+    given(
+            pseudonymProvider.retrieveTransportIds(
+                "id1", Set.of("id1"), "unknown domain", "unknown domain"))
         .willReturn(Mono.error(new UnknownDomainException("unknown domain")));
     given(shiftedDatesProvider.generateDateShift("id1", Duration.ofDays(14)))
         .willReturn(Mono.just(Duration.ofDays(1)));
 
-    var body = new PseudonymizeRequest("id1", Set.of("id1"), "unknown domain", Duration.ofDays(14));
+    var body =
+        new PseudonymizeRequest(
+            "id1",
+            Set.of("id1"),
+            "unknown domain",
+            "unknown domain",
+            "unknown domain",
+            Duration.ofDays(14));
 
     create(controller.getTransportIdsAndDateShiftingValues(Mono.just(body)))
         .assertNext(
@@ -78,12 +89,14 @@ class DeIdentificationControllerTest {
 
   @Test
   void getTransportIdsAndDateShiftingValuesIllegalArgumentException() {
-    given(pseudonymProvider.retrieveTransportIds("id1", Set.of("id1"), "domain"))
+    given(pseudonymProvider.retrieveTransportIds("id1", Set.of("id1"), "domain", "domain"))
         .willReturn(Mono.error(new IllegalArgumentException("Illegal argument")));
     given(shiftedDatesProvider.generateDateShift("id1", Duration.ofDays(14)))
         .willReturn(Mono.just(Duration.ofDays(1)));
 
-    var body = new PseudonymizeRequest("id1", Set.of("id1"), "domain", Duration.ofDays(14));
+    var body =
+        new PseudonymizeRequest(
+            "id1", Set.of("id1"), "domain", "domain", "domain", Duration.ofDays(14));
 
     create(controller.getTransportIdsAndDateShiftingValues(Mono.just(body)))
         .assertNext(
@@ -95,7 +108,8 @@ class DeIdentificationControllerTest {
 
   @Test
   void getTransportIdsAndDateShiftingValuesEmptyIds() {
-    var body = new PseudonymizeRequest("id1", Set.of(), "domain", Duration.ofDays(14));
+    var body =
+        new PseudonymizeRequest("id1", Set.of(), "domain", "domain", "domain", Duration.ofDays(14));
 
     create(controller.getTransportIdsAndDateShiftingValues(Mono.just(body))).verifyComplete();
   }
@@ -103,12 +117,13 @@ class DeIdentificationControllerTest {
   @Test
   void getTransportIdsAndDateShiftingValuesInternalServerError() {
     var ids = Set.of("id1", "id2");
-    given(pseudonymProvider.retrieveTransportIds("id1", ids, "domain"))
+    given(pseudonymProvider.retrieveTransportIds("id1", ids, "domain", "domain"))
         .willReturn(Mono.error(new InternalServerErrorException("Internal Server Error")));
     given(shiftedDatesProvider.generateDateShift("id1", Duration.ofDays(14)))
         .willReturn(Mono.just(Duration.ofDays(1)));
 
-    var body = new PseudonymizeRequest("id1", ids, "domain", Duration.ofDays(14));
+    var body =
+        new PseudonymizeRequest("id1", ids, "domain", "domain", "domain", Duration.ofDays(14));
 
     create(controller.getTransportIdsAndDateShiftingValues(Mono.just(body)))
         .assertNext(

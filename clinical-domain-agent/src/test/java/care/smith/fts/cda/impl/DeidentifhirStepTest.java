@@ -11,6 +11,7 @@ import static reactor.test.StepVerifier.create;
 
 import care.smith.fts.api.ConsentedPatient;
 import care.smith.fts.api.ConsentedPatientBundle;
+import care.smith.fts.cda.impl.DeidentifhirStepConfig.TCADomains;
 import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil;
 import care.smith.fts.test.MockServerUtil;
 import com.typesafe.config.Config;
@@ -42,7 +43,7 @@ class DeidentifhirStepTest {
     step =
         new DeidentifhirStep(
             server.createClient(WebClient.builder(), null),
-            "domain",
+            new TCADomains("domain", "domain", "domain"),
             ofDays(14),
             deidentifhirConfig,
             scraperConfig,
@@ -62,7 +63,9 @@ class DeidentifhirStepTest {
                                 {
                                   "patientId" : "id1",
                                   "ids" : [ "id1.identifier.identifierSystem:id1", "id1.Patient:id1" ],
-                                  "domain" : "domain",
+                                  "pseudonymDomain" : "domain",
+                                  "saltDomain" : "domain",
+                                  "dateShiftDomain" : "domain",
                                   "dateShift" : 1209600.0
                                 }
                                 """,

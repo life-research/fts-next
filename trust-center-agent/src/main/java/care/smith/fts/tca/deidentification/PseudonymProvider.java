@@ -9,11 +9,12 @@ public interface PseudonymProvider {
 
   /**
    * @param ids to transport ids
-   * @param domain the domain
+   * @param pseudonymDomain the domain
+   * @param saltDomain
    * @return the <code>PseudonymResponse</code>
    */
   Mono<Tuple2<String, Map<String, String>>> retrieveTransportIds(
-      String patientId, Set<String> ids, String domain);
+      String patientId, Set<String> ids, String pseudonymDomain, String saltDomain);
 
   /**
    * Retrieves the mapping of <code>transportId</code> to <code>secureId</code> using the mappings

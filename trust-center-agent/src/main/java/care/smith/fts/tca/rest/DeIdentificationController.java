@@ -44,9 +44,10 @@ public class DeIdentificationController {
             r -> {
               if (!r.ids().isEmpty()) {
                 var transportIds =
-                    pseudonymProvider.retrieveTransportIds(r.patientId(), r.ids(), r.domain());
+                    pseudonymProvider.retrieveTransportIds(
+                        r.patientId(), r.ids(), r.pseudonymDomain(), r.saltDomain());
                 var shiftedDate =
-                    shiftedDatesProvider.generateDateShift(r.patientId(), r.dateShift());
+                    shiftedDatesProvider.generateDateShift(r.patientId(), r.maxDateShift());
                 return transportIds.zipWith(
                     shiftedDate,
                     (t, shift) -> new PseudonymizeResponse(t.getT1(), t.getT2(), shift));
