@@ -18,7 +18,12 @@ class PseudonymizeRequestTest {
   void serialize() throws JsonProcessingException {
     var request =
         new PseudonymizeRequest(
-            "patient123", Set.of("id1", "id2"), "example.com", Duration.ofDays(30));
+            "patient123",
+            Set.of("id1", "id2"),
+            "pDomain",
+            "sDomain",
+            "dDomain",
+            Duration.ofDays(30));
 
     String jsonString = objectMapper.writeValueAsString(request);
 
@@ -46,7 +51,9 @@ class PseudonymizeRequestTest {
 
     assertThat(request.patientId()).isEqualTo("patient123");
     assertThat(request.ids()).containsExactlyInAnyOrder("id1", "id2");
-    assertThat(request.domain()).isEqualTo("example.com");
-    assertThat(request.dateShift()).isEqualTo(Duration.ofDays(30));
+    assertThat(request.pseudonymDomain()).isEqualTo("pDomain");
+    assertThat(request.pseudonymDomain()).isEqualTo("sDomain");
+    assertThat(request.pseudonymDomain()).isEqualTo("dDomain");
+    assertThat(request.maxDateShift()).isEqualTo(Duration.ofDays(30));
   }
 }

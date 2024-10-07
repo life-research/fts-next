@@ -69,10 +69,12 @@ class DeIdentificationControllerIT extends BaseIT {
     var response =
         doPost(
             ofEntries(
-                entry("domain", "MII"),
+                entry("pseudonymDomain", "MII"),
+                entry("saltDomain", "MII"),
+                entry("dateShiftDomain", "MII"),
                 entry("patientId", "id-144218"),
                 entry("ids", Set.of("id-144218", "id-244194")),
-                entry("dateShift", ofDays(14).getSeconds())));
+                entry("maxDateShift", ofDays(14).getSeconds())));
 
     create(response)
         .assertNext(
@@ -112,10 +114,12 @@ class DeIdentificationControllerIT extends BaseIT {
     var response =
         doPost(
             ofEntries(
-                entry("domain", "MII"),
+                entry("pseudonymDomain", "MII"),
+                entry("saltDomain", "MII"),
+                entry("dateShiftDomain", "MII"),
                 entry("patientId", "id-144218"),
                 entry("ids", Set.of("id-144218", "id-244194")),
-                entry("dateShift", ofDays(14).getSeconds())));
+                entry("maxDateShift", ofDays(14).getSeconds())));
 
     create(response)
         .assertNext(
