@@ -1,6 +1,7 @@
 package care.smith.fts.cda.impl;
 
 import care.smith.fts.util.HttpClientConfig;
+import care.smith.fts.util.tca.TCADomains;
 import java.io.File;
 import java.time.Duration;
 
@@ -9,5 +10,4 @@ public record DeidentifhirStepConfig(
 
   public record TCAConfig(HttpClientConfig server, TCADomains domains) {}
 
-  public record TCADomains(String pseudonym, String salt, String dateShift) {}
 }

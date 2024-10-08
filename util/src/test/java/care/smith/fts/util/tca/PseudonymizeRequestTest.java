@@ -20,9 +20,7 @@ class PseudonymizeRequestTest {
         new PseudonymizeRequest(
             "patient123",
             Set.of("id1", "id2"),
-            "pDomain",
-            "sDomain",
-            "dDomain",
+            new TCADomains("pDomain", "sDomain", "dDomain"),
             Duration.ofDays(30));
 
     String jsonString = objectMapper.writeValueAsString(request);
@@ -31,7 +29,9 @@ class PseudonymizeRequestTest {
         .contains("patient123")
         .contains("id1")
         .contains("id2")
-        .contains("example.com")
+        .contains("pDomain")
+        .contains("sDomain")
+        .contains("dDomain")
         .contains("2592000"); // 30 Days in seconds
   }
 
@@ -42,8 +42,12 @@ class PseudonymizeRequestTest {
             {
                 "patientId": "patient123",
                 "ids": ["id1", "id2"],
-                "domain": "example.com",
-                "dateShift": "P30D"
+                "tcaDomains": {
+                  "pseudonym" : "pDomain",
+                  "salt" : "sDomain",
+                  "dateShift" : "dDomain"
+                },
+                "maxDateShift": "P30D"
             }
             """;
 
@@ -51,9 +55,9 @@ class PseudonymizeRequestTest {
 
     assertThat(request.patientId()).isEqualTo("patient123");
     assertThat(request.ids()).containsExactlyInAnyOrder("id1", "id2");
-    assertThat(request.pseudonymDomain()).isEqualTo("pDomain");
-    assertThat(request.pseudonymDomain()).isEqualTo("sDomain");
-    assertThat(request.pseudonymDomain()).isEqualTo("dDomain");
+    assertThat(request.tcaDomains().pseudonym()).isEqualTo("pDomain");
+    assertThat(request.tcaDomains().salt()).isEqualTo("sDomain");
+    assertThat(request.tcaDomains().dateShift()).isEqualTo("dDomain");
     assertThat(request.maxDateShift()).isEqualTo(Duration.ofDays(30));
   }
 }

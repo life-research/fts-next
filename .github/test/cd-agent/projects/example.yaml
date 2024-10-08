@@ -23,7 +23,7 @@ deidentificator:
         pseudonym: MII
         salt: MII
         dateShift: MII
-    maxDateShiftValue: P14D
+    maxDateShift: P14D
     deidentifhirConfig: /app/config/deidentifhir/CDtoTransport.profile
     scraperConfig: /app/config/deidentifhir/IDScraper.profile
 

@@ -1,14 +1,12 @@
 package care.smith.fts.tca.rest;
 
 import care.smith.fts.tca.deidentification.PseudonymProvider;
-import care.smith.fts.tca.deidentification.ShiftedDatesProvider;
 import care.smith.fts.util.error.ErrorResponseUtil;
 import care.smith.fts.util.error.UnknownDomainException;
 import care.smith.fts.util.tca.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -23,13 +21,10 @@ import reactor.core.publisher.Mono;
 @Validated
 public class DeIdentificationController {
   private final PseudonymProvider pseudonymProvider;
-  private final ShiftedDatesProvider shiftedDatesProvider;
 
   @Autowired
-  public DeIdentificationController(
-      PseudonymProvider pseudonymProvider, ShiftedDatesProvider shiftedDatesProvider) {
+  public DeIdentificationController(PseudonymProvider pseudonymProvider) {
     this.pseudonymProvider = pseudonymProvider;
-    this.shiftedDatesProvider = shiftedDatesProvider;
   }
 
   @PostMapping(
@@ -43,14 +38,8 @@ public class DeIdentificationController {
         requestData.flatMap(
             r -> {
               if (!r.ids().isEmpty()) {
-                var transportIds =
-                    pseudonymProvider.retrieveTransportIds(
-                        r.patientId(), r.ids(), r.pseudonymDomain(), r.saltDomain());
-                var shiftedDate =
-                    shiftedDatesProvider.generateDateShift(r.patientId(), r.maxDateShift());
-                return transportIds.zipWith(
-                    shiftedDate,
-                    (t, shift) -> new PseudonymizeResponse(t.getT1(), t.getT2(), shift));
+                return pseudonymProvider.retrieveTransportIds(
+                    r.patientId(), r.ids(), r.tcaDomains(), r.maxDateShift());
               } else {
                 return Mono.empty();
               }
@@ -72,7 +61,7 @@ public class DeIdentificationController {
       value = "/rd/resolve-pseudonyms",
       consumes = MediaType.APPLICATION_JSON_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
-  public Mono<ResponseEntity<Map<String, String>>> fetchPseudonymizedIds(
+  public Mono<ResponseEntity<ResolveResponse>> fetchPseudonymizedIds(
       @RequestBody @NotNull @Pattern(regexp = "^[\\w-]+$") String transportIDMapName) {
     log.trace("Resolve pseudonyms of map: {} ", transportIDMapName);
     return pseudonymProvider

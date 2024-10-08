@@ -1,5 +1,6 @@
 package care.smith.fts.cda.services.deidentifhir;
 
+import care.smith.fts.util.deidentifhir.DateShiftingProvider;
 import care.smith.fts.util.deidentifhir.NamespacingReplacementProvider;
 import com.typesafe.config.Config;
 import de.ume.deidentifhir.Deidentifhir;
@@ -16,7 +17,7 @@ import scala.Function4;
 import scala.collection.immutable.Map;
 import scala.collection.immutable.Seq;
 
-public interface DeidentifhirUtils {
+public interface DeidentifhirUtil {
   static Registry generateRegistry(
       String patientId, java.util.Map<String, String> transportIds, Duration dateShiftValue) {
     var keyCreator = NamespacingReplacementProvider.withNamespacing(patientId);
