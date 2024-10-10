@@ -1,13 +1,12 @@
 package care.smith.fts.cda.impl;
 
-import static care.smith.fts.cda.services.deidentifhir.DeidentifhirUtils.generateRegistry;
+import static care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil.generateRegistry;
 import static care.smith.fts.util.RetryStrategies.defaultRetryStrategy;
 
 import care.smith.fts.api.ConsentedPatientBundle;
 import care.smith.fts.api.TransportBundle;
 import care.smith.fts.api.cda.Deidentificator;
-import care.smith.fts.cda.impl.DeidentifhirStepConfig.TCADomains;
-import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtils;
+import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil;
 import care.smith.fts.cda.services.deidentifhir.IDATScraper;
 import care.smith.fts.util.error.TransferProcessException;
 import care.smith.fts.util.tca.*;
@@ -57,7 +56,7 @@ class DeidentifhirStep implements Deidentificator {
               var dateShiftValue = response.dateShiftValue();
               var registry = generateRegistry(patient.id(), transportIDs, dateShiftValue);
               var deidentified =
-                  DeidentifhirUtils.deidentify(
+                  DeidentifhirUtil.deidentify(
                       deidentifhirConfig, registry, bundle.bundle(), patient.id(), meterRegistry);
               return new TransportBundle(deidentified, response.tIDMapName());
             });
@@ -67,7 +66,10 @@ class DeidentifhirStep implements Deidentificator {
       String patientId, Set<String> ids) {
     PseudonymizeRequest request =
         new PseudonymizeRequest(
-            patientId, ids, domains.pseudonym(), domains.salt(), domains.dateShift(), maxDateShift);
+            patientId,
+            ids,
+            new TCADomains(domains.pseudonym(), domains.salt(), domains.dateShift()),
+            maxDateShift);
 
     log.trace("Fetch TIDs and date shifting values for {} IDs", ids.size());
 

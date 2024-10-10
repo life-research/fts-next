@@ -11,9 +11,9 @@ import static reactor.test.StepVerifier.create;
 
 import care.smith.fts.api.ConsentedPatient;
 import care.smith.fts.api.ConsentedPatientBundle;
-import care.smith.fts.cda.impl.DeidentifhirStepConfig.TCADomains;
 import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil;
 import care.smith.fts.test.MockServerUtil;
+import care.smith.fts.util.tca.TCADomains;
 import com.typesafe.config.Config;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
@@ -63,10 +63,12 @@ class DeidentifhirStepTest {
                                 {
                                   "patientId" : "id1",
                                   "ids" : [ "id1.identifier.identifierSystem:id1", "id1.Patient:id1" ],
-                                  "pseudonymDomain" : "domain",
-                                  "saltDomain" : "domain",
-                                  "dateShiftDomain" : "domain",
-                                  "dateShift" : 1209600.0
+                                  "tcaDomains": {
+                                    "pseudonym" : "domain",
+                                    "salt" : "domain",
+                                    "dateShift" : "domain"
+                                  },
+                                  "maxDateShift" : 1209600.0
                                 }
                                 """,
                         ONLY_MATCHING_FIELDS)))
