@@ -19,8 +19,11 @@ deidentificator:
     tca:
       server:
         baseUrl: http://tc-agent:8080
-      domain: MII
-    dateShift: P14D
+      domains:
+        pseudonym: MII
+        salt: MII
+        dateShift: MII
+    maxDateShift: P14D
     deidentifhirConfig: /app/config/deidentifhir/CDtoTransport.profile
     scraperConfig: /app/config/deidentifhir/IDScraper.profile
 

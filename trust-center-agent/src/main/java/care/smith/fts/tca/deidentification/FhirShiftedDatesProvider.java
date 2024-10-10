@@ -1,50 +1,38 @@
 package care.smith.fts.tca.deidentification;
 
-import static java.lang.Long.parseLong;
 import static java.time.Duration.ofMillis;
 
+import com.google.common.hash.Hashing;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Random;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
-import org.redisson.api.RedissonReactiveClient;
-import org.springframework.stereotype.Component;
-import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 @Slf4j
-@Component
 public class FhirShiftedDatesProvider implements ShiftedDatesProvider {
-  private static final String SHIFTED_DATE_PREFIX = "shiftedDate";
-  private final RedissonClient redisClient;
-
-  public FhirShiftedDatesProvider(RedissonClient redisClient) {
-    this.redisClient = redisClient;
-  }
 
   @Override
-  public Mono<Duration> generateDateShift(String id, Duration dateShiftBy) {
-    RedissonReactiveClient redis = redisClient.reactive();
-    return redis
-        .getBucket(withPrefix(id))
-        .setIfAbsent(String.valueOf(getRandomDateShift(dateShiftBy)))
-        .doOnError(e -> log.error("Unable to set date shift: {}", e.getMessage()))
-        .switchIfEmpty(Mono.just(true)) // TODO check if we need this
-        .map(ret -> id)
-        .doOnNext(ignore -> log.trace("generateDateShift for id: {}", id))
-        .flatMap(
-            ignore ->
-                redis
-                    .<String>getBucket(withPrefix(id))
-                    .get()
-                    .doOnError(e -> log.error("Unable to receive date shift: {}", e.getMessage()))
-                    .map(shift -> ofMillis(parseLong(shift))));
+  public Tuple2<Duration, Duration> generateDateShift(
+      @NotBlank String salt, @NotNull Duration maxDateShift) {
+    var dateShifts = getDateShifts(salt, maxDateShift);
+    var cdDateShift = ofMillis(dateShifts.getT1());
+    var rdDateShift = ofMillis(dateShifts.getT2());
+    return Tuples.of(cdDateShift, rdDateShift.minus(cdDateShift));
   }
 
-  private static String withPrefix(String id) {
-    return "%s:%s".formatted(SHIFTED_DATE_PREFIX, id);
-  }
-
-  public long getRandomDateShift(Duration dateShiftBy) {
-    return new Random().nextLong(-dateShiftBy.toMillis(), dateShiftBy.toMillis());
+  /**
+   * @param salt for the hashing algorithm
+   * @param maxDateShift the maximal date shift
+   * @return A tuple with cdDateShift, rdDateShift
+   */
+  public Tuple2<Long, Long> getDateShifts(@NotBlank String salt, @NotNull Duration maxDateShift) {
+    var seed = Hashing.sha256().hashString(salt, StandardCharsets.UTF_8).padToLong();
+    Random random = new Random(seed);
+    var shiftBy = maxDateShift.toMillis();
+    return Tuples.of(random.nextLong(-shiftBy, shiftBy), random.nextLong(-shiftBy, shiftBy));
   }
 }

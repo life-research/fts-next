@@ -1,12 +1,12 @@
 package care.smith.fts.cda.impl;
 
-import static care.smith.fts.cda.services.deidentifhir.DeidentifhirUtils.generateRegistry;
+import static care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil.generateRegistry;
 import static care.smith.fts.util.RetryStrategies.defaultRetryStrategy;
 
 import care.smith.fts.api.ConsentedPatientBundle;
 import care.smith.fts.api.TransportBundle;
 import care.smith.fts.api.cda.Deidentificator;
-import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtils;
+import care.smith.fts.cda.services.deidentifhir.DeidentifhirUtil;
 import care.smith.fts.cda.services.deidentifhir.IDATScraper;
 import care.smith.fts.util.error.TransferProcessException;
 import care.smith.fts.util.tca.*;
@@ -23,22 +23,22 @@ import reactor.core.publisher.Mono;
 @Slf4j
 class DeidentifhirStep implements Deidentificator {
   private final WebClient httpClient;
-  private final String domain;
-  private final Duration dateShift;
+  private final TCADomains domains;
+  private final Duration maxDateShift;
   private final com.typesafe.config.Config deidentifhirConfig;
   private final com.typesafe.config.Config scraperConfig;
   private final MeterRegistry meterRegistry;
 
   public DeidentifhirStep(
       WebClient httpClient,
-      String domain,
-      Duration dateShift,
+      TCADomains domains,
+      Duration maxDateShift,
       com.typesafe.config.Config deidentifhirConfig,
       com.typesafe.config.Config scraperConfig,
       MeterRegistry meterRegistry) {
     this.httpClient = httpClient;
-    this.domain = domain;
-    this.dateShift = dateShift;
+    this.domains = domains;
+    this.maxDateShift = maxDateShift;
     this.deidentifhirConfig = deidentifhirConfig;
     this.scraperConfig = scraperConfig;
     this.meterRegistry = meterRegistry;
@@ -56,7 +56,7 @@ class DeidentifhirStep implements Deidentificator {
               var dateShiftValue = response.dateShiftValue();
               var registry = generateRegistry(patient.id(), transportIDs, dateShiftValue);
               var deidentified =
-                  DeidentifhirUtils.deidentify(
+                  DeidentifhirUtil.deidentify(
                       deidentifhirConfig, registry, bundle.bundle(), patient.id(), meterRegistry);
               return new TransportBundle(deidentified, response.tIDMapName());
             });
@@ -64,7 +64,12 @@ class DeidentifhirStep implements Deidentificator {
 
   private Mono<PseudonymizeResponse> fetchTransportIdsAndDateShiftingValues(
       String patientId, Set<String> ids) {
-    PseudonymizeRequest request = new PseudonymizeRequest(patientId, ids, domain, dateShift);
+    PseudonymizeRequest request =
+        new PseudonymizeRequest(
+            patientId,
+            ids,
+            new TCADomains(domains.pseudonym(), domains.salt(), domains.dateShift()),
+            maxDateShift);
 
     log.trace("Fetch TIDs and date shifting values for {} IDs", ids.size());
 
