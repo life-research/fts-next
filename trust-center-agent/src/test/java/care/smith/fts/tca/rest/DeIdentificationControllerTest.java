@@ -9,6 +9,7 @@ import care.smith.fts.util.error.TransferProcessException;
 import care.smith.fts.util.error.UnknownDomainException;
 import care.smith.fts.util.tca.PseudonymizeRequest;
 import care.smith.fts.util.tca.PseudonymizeResponse;
+import care.smith.fts.util.tca.ResolveResponse;
 import care.smith.fts.util.tca.TCADomains;
 import com.github.dockerjava.api.exception.InternalServerErrorException;
 import java.time.Duration;
@@ -148,13 +149,20 @@ class DeIdentificationControllerTest {
   @Test
   void fetchPseudonymizedIds() {
     given(pseudonymProvider.fetchPseudonymizedIds("tIDMapName"))
-        .willReturn(Mono.just(Map.of("tid-1", "pid1", "tid-2", "pid2")));
+        .willReturn(
+            Mono.just(
+                new ResolveResponse(
+                    Map.of("tid-1", "pid1", "tid-2", "pid2"), Duration.ofMillis(12345))));
 
     create(controller.fetchPseudonymizedIds("tIDMapName"))
         .assertNext(
             r -> {
               assertThat(r.getStatusCode().is2xxSuccessful()).isTrue();
-              assertThat(r.getBody()).containsEntry("tid-1", "pid1").containsEntry("tid-2", "pid2");
+              var body = r.getBody();
+              assertThat(body.tidPidMap())
+                  .containsEntry("tid-1", "pid1")
+                  .containsEntry("tid-2", "pid2");
+              assertThat(body.dateShiftBy()).isEqualTo(Duration.ofMillis(12345));
             })
         .verifyComplete();
   }

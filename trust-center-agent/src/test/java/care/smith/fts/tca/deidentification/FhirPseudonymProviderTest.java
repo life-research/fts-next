@@ -148,12 +148,15 @@ class FhirPseudonymProviderTest {
   void fetchPseudonymIDs() {
     given(redis.getMapCache(anyString())).willReturn(mapCache);
     given(mapCache.readAllMap())
-        .willReturn(Mono.just(Map.of("id1", "123456789", "id2", "987654321")));
+        .willReturn(
+            Mono.just(Map.of("id1", "123456789", "id2", "987654321", "dateShiftMillis", "12345")));
     create(pseudonymProvider.fetchPseudonymizedIds("tIDMapName"))
         .assertNext(
             m -> {
-              assertThat(m.keySet()).containsExactlyInAnyOrder("id1", "id2");
-              assertThat(m.values()).containsExactlyInAnyOrder("123456789", "987654321");
+              assertThat(m.tidPidMap().keySet()).containsExactlyInAnyOrder("id1", "id2");
+              assertThat(m.tidPidMap().values())
+                  .containsExactlyInAnyOrder("123456789", "987654321");
+              assertThat(m.dateShiftBy()).isEqualTo(Duration.ofMillis(12345));
             })
         .verifyComplete();
   }

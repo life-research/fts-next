@@ -5,6 +5,7 @@ import static java.util.stream.Collectors.toMap;
 
 import care.smith.fts.tca.deidentification.configuration.PseudonymizationConfiguration;
 import care.smith.fts.util.tca.PseudonymizeResponse;
+import care.smith.fts.util.tca.ResolveResponse;
 import care.smith.fts.util.tca.TCADomains;
 import com.google.common.hash.Hashing;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -77,8 +78,12 @@ public class FhirPseudonymProvider implements PseudonymProvider {
                       transportToSecureIDMapping,
                       originalToTransportIDMapping);
 
-                  var dateShift = getDateShift(maxDateShift, dateShiftSalt);
-                  return rMap.putAll(transportToSecureIDMapping).thenReturn(dateShift);
+                  var dateShifts = getDateShifts(maxDateShift, dateShiftSalt);
+                  transportToSecureIDMapping.put(
+                      "dateShiftMillis", String.valueOf(dateShifts.rdDateShift().toMillis()));
+
+                  return rMap.putAll(transportToSecureIDMapping)
+                      .thenReturn(dateShifts.cdDateShift());
                 }))
         .map(
             cdDateShift ->
@@ -98,11 +103,15 @@ public class FhirPseudonymProvider implements PseudonymProvider {
                         .toString()));
   }
 
-  private static Duration getDateShift(Duration maxDateShift, String dateShiftSalt) {
-    return new FhirShiftedDatesProvider().generateDateShift(dateShiftSalt, maxDateShift);
+  private static DateShifts getDateShifts(Duration maxDateShift, String dateShiftSalt) {
+    var fhirShiftedDatesProvider = new FhirShiftedDatesProvider();
+    var dateShiftValues = fhirShiftedDatesProvider.generateDateShift(dateShiftSalt, maxDateShift);
+    var cdDateShift = dateShiftValues.getT1();
+    var rdDateShift = dateShiftValues.getT2();
+    return new DateShifts(cdDateShift, rdDateShift);
   }
 
-  private record Result(Duration cdDateShift, Duration rdDateShift) {}
+  private record DateShifts(Duration cdDateShift, Duration rdDateShift) {}
 
   /**
    * With this function we make sure that the patient's ID in the RDA is the de-identified ID stored
@@ -121,7 +130,7 @@ public class FhirPseudonymProvider implements PseudonymProvider {
   }
 
   @Override
-  public Mono<Map<String, String>> fetchPseudonymizedIds(String tIDMapName) {
+  public Mono<ResolveResponse> fetchPseudonymizedIds(String tIDMapName) {
     RedissonReactiveClient redis = redisClient.reactive();
     return Mono.just(tIDMapName)
         .flatMap(name -> redis.getMapCache(name).readAllMap())
@@ -129,6 +138,13 @@ public class FhirPseudonymProvider implements PseudonymProvider {
             m ->
                 m.entrySet().stream()
                     .collect(toMap(e -> (String) e.getKey(), e -> (String) e.getValue())))
-        .retryWhen(defaultRetryStrategy(meterRegistry, "fetchPseudonymizedIds"));
+        .retryWhen(defaultRetryStrategy(meterRegistry, "fetchPseudonymizedIds"))
+        .map(FhirPseudonymProvider::buildResolveResponse);
+  }
+
+  private static ResolveResponse buildResolveResponse(Map<String, String> map) {
+    var mutableMap = new HashMap<>(map);
+    var dateShiftValue = Duration.ofMillis(Long.parseLong(mutableMap.remove("dateShiftMillis")));
+    return new ResolveResponse(mutableMap, dateShiftValue);
   }
 }
